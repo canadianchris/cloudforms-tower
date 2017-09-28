@@ -1,34 +1,41 @@
 ---
-# This playbook is meant to be an easy introduction to using Ansible Tower to 
-# deploy VMs to Azure
+# This playbook is meant to be an easy introduction to using Ansible Tower to
+# deploy VMs to Azure.
+#
 # The result of this template will be a RHEL 7.3 VM deployed from the Azure marketplace
-# the job template should be run against the tower system, note connection: local
-
+# the job template should be run against an inventory that includes the tower system.
 - name: Deploy Azure VM
   hosts: all
+  # connection: local tells tower to use the local connection to run this playbook
   connection: local
-  # use cloud credentials in Tower for Azure access
-  # define a survey for any parameters that you want to prompt users for
-  # here we are using survey_resource_group, survey_vm_name, survey_ssh_public_key 
+  # Use Azure cloud credentials in Tower for this Job Template
+  # Define a survey for parameters to prompt users for:
+  # survey_resource_group: Azure resource group to deploy to
+  # survey_vm_name: name of the VM
+  # survey_ssh_public_key: the public key for ssh
   tasks:
     - name: Create VM
       azure_rm_virtualmachine:
-        # the lookups here are taking infromation from the tower cloud credentials
-        # define azure cloud credentials in Tower and ensure they are referenced
-        # in the job template 
+        # The lookups here are taking infromation from the tower cloud credentials.
         subscription_id: "{{ lookup('env', 'AZURE_SUBSCRIPTION_ID') }}"
         client_id: "{{ lookup('env', 'AZURE_CLIENT_ID') }}"
         tenant: "{{ lookup('env', 'AZURE_TENANT') }}"
         secret: "{{ lookup('env', 'AZURE_SECRET') }}"
         resource_group: "{{ survey_resource_group }}"
+        # vm_size need to match a size that Azure provides
         vm_size: Standard_DS1_v2
         name: "{{ survey_vm_name }}"
         os_type: Linux
+        # ssh_password_enabled: False means that users may not connect to this system
+        # over SSH using a password.
         ssh_password_enabled: False
+        # ssh_public_keys defines where the public key will be imported, and the key itself.
         ssh_public_keys:
           - path: /home/az_user/.ssh/authorized_keys
             key_data: "{{ survey_ssh_public_key }}"
         admin_username: az_user
+        # image defines what image is being used to deploy. This must mast offers
+        # available to the Azure Cloud Credentials being used.
         image:
           offer: RHEL
           publisher: RedHat
